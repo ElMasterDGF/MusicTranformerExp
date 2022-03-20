@@ -35,13 +35,13 @@ def preprocess_midi_files_under(midi_root, save_dir):
             print('EOF Error')
             return
 
-        with open('{}\{}.pickle'.format(save_dir, path.split('\\')[-1]), 'wb') as f:
+        with open('{}/{}.pickle'.format(save_dir, path.split('//')[-1]), 'wb') as f:
             pickle.dump(data, f)
 
         notes = sum([e<128 for e in data])
         duration = sum([(e-255)*(e in range(256,356)) for e in data])/100
         
-        stats.write(path.split('\\')[-1] + ";" + str(len(data)) + ";" + str(notes) + ";" + sec2min(duration) + "\n")
+        stats.write(path.split('//')[-1] + ";" + str(len(data)) + ";" + str(notes) + ";" + sec2min(duration) + "\n")
 
         notal += notes
         etotal += len(data)
