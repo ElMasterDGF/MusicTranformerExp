@@ -10,6 +10,7 @@ def preprocess_midi(path):
 
 
 def preprocess_midi_files_under(midi_root, save_dir):
+    print(midi_root, save_dir)
     midi_paths = list(find_files_by_extensions(midi_root, ['.mid', '.midi']))
     os.makedirs(save_dir, exist_ok=True)
     out_fmt = '{}-{}.data'
@@ -34,28 +35,29 @@ def preprocess_midi_files_under(midi_root, save_dir):
         except EOFError:
             print('EOF Error')
             return
-
-        with open('{}/{}.pickle'.format(save_dir, path.split('//')[-1]), 'wb') as f:
-            pickle.dump(data, f)
-
-        notes = sum([e<128 for e in data])
-        duration = sum([(e-255)*(e in range(256,356)) for e in data])/100
         
-        stats.write(path.split('//')[-1] + ";" + str(len(data)) + ";" + str(notes) + ";" + sec2min(duration) + "\n")
+        if len(data) > 2050:
+            with open('{}/{}.pickle'.format(save_dir, path.split('/')[-1]), 'wb') as f:
+                pickle.dump(data, f)
 
-        notal += notes
-        etotal += len(data)
-        sectotal += duration
+            notes = sum([e<128 for e in data])
+            duration = sum([(e-255)*(e in range(256,356)) for e in data])/100
+            
+            stats.write(path.split('/')[-1] + ";" + str(len(data)) + ";" + str(notes) + ";" + sec2min(duration) + "\n")
 
-        if notes<minote:
-            minote=notes
-        elif notes>maxnote:
-            maxnote=notes
+            notal += notes
+            etotal += len(data)
+            sectotal += duration
 
-        if len(data)<mine:
-            mine=len(data)
-        elif len(data)>maxe:
-            maxe=len(data)
+            if notes<minote:
+                minote=notes
+            elif notes>maxnote:
+                maxnote=notes
+
+            if len(data)<mine:
+                mine=len(data)
+            elif len(data)>maxe:
+                maxe=len(data)
         
     stats.write("\nNumber of Pieces;" + str(npieces) + "\n")
     stats.write("Total Events;"+ str(etotal) + "\n")
@@ -91,4 +93,5 @@ def sec2min(val):
     return ("{:02d}:{:02d}".format(m,s))
 
 if __name__ == '__main__':
-    preprocess_midi_files_under("dataset","processed_data")
+    preprocess_midi_files_under(sys.argv[1] if len(sys.argv)>1 else "dataset",
+        sys.argv[2] if len(sys.argv)>2 else "processed_data")

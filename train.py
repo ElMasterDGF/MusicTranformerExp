@@ -8,11 +8,21 @@ from data import Data
 import utils
 import datetime
 import time
+import sys
 
 import torch
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 
+#import os
+
+# GPU stuff
+#num_gpus = os.environ['CUDA_VISIBLE_DEVICES'].split(',').__len__()
+#os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(f'{i}' for i in range(num_gpus))
+
+#print(os.environ['CUDA_VISIBLE_DEVICES'])
+
+#os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
 # set config
 config.load("model", ['configs/train.yml'], initialize=True)
@@ -22,6 +32,8 @@ if torch.cuda.is_available():
     config.device = torch.device('cuda')
 else:
     config.device = torch.device('cpu')
+
+print(config.device)
 
 # load data
 dataset = Data(config.pickle_dir)
@@ -43,12 +55,15 @@ mt.to(config.device)
 opt = optim.Adam(mt.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9)
 scheduler = CustomSchedule(config.embedding_dim, optimizer=opt)
 
-# multi-GPU set
+# multi-GPU set 
+'''
 if torch.cuda.device_count() > 1:
     single_mt = mt
     mt = torch.nn.DataParallel(mt, output_device=torch.cuda.device_count()-1)
 else:
     single_mt = mt
+'''
+single_mt = mt
 
 # init metric set
 metric_set = MetricsSet({
@@ -81,7 +96,7 @@ for e in range(config.epochs):
             batch_y = torch.from_numpy(batch_y).contiguous().to(config.device, non_blocking=True, dtype=torch.int)
         except IndexError:
             continue
-
+        
         start_time = time.time()
         mt.train()
         sample = mt.forward(batch_x)
@@ -90,11 +105,11 @@ for e in range(config.epochs):
         loss.backward()
         scheduler.step()
         end_time = time.time()
-
-        if config.debug:
-            print("[Loss]: {}".format(loss))
-
-        train_summary_writer.add_scalar('loss', metrics['loss'], global_step=idx)
+        
+        #if config.debug:
+            #print("[Loss]: {:6.6}".format(loss.item()))
+        
+        train_summary_writer.add_scalar('loss', loss.item(), global_step=idx)
         train_summary_writer.add_scalar('accuracy', metrics['accuracy'], global_step=idx)
         train_summary_writer.add_scalar('learning_rate', scheduler.rate(), global_step=idx)
         train_summary_writer.add_scalar('iter_p_sec', end_time-start_time, global_step=idx)
@@ -109,14 +124,15 @@ for e in range(config.epochs):
             eval_preiction, weights = single_mt.forward(eval_x)
 
             eval_metrics = metric_set(eval_preiction, eval_y)
-            torch.save(single_mt.state_dict(), args.model_dir+'/train-{}.pth'.format(e))
+            torch.save(single_mt.state_dict(), 'model/train-{}.pth'.format(e))
             if b == 0:
                 train_summary_writer.add_histogram("target_analysis", batch_y, global_step=e)
                 train_summary_writer.add_histogram("source_analysis", batch_x, global_step=e)
+                '''
                 for i, weight in enumerate(weights):
                     attn_log_name = "attn/layer-{}".format(i)
                     utils.attention_image_summary(
-                        attn_log_name, weight, step=idx, writer=eval_summary_writer)
+                        attn_log_name, weight, step=idx, writer=eval_summary_writer)'''
 
             eval_summary_writer.add_scalar('loss', eval_metrics['loss'], global_step=idx)
             eval_summary_writer.add_scalar('accuracy', eval_metrics['accuracy'], global_step=idx)
@@ -128,7 +144,7 @@ for e in range(config.epochs):
             print('Eval >>>> Loss: {:6.6}, Accuracy: {}'.format(eval_metrics['loss'], eval_metrics['accuracy']))
         torch.cuda.empty_cache()
         idx += 1
-
+        '''
         # switch output device to: gpu-1 ~ gpu-n
         sw_start = time.time()
         if torch.cuda.device_count() > 1:
@@ -136,8 +152,8 @@ for e in range(config.epochs):
         sw_end = time.time()
         if config.debug:
             print('output switch time: {}'.format(sw_end - sw_start) )
-
-torch.save(single_mt.state_dict(), args.model_dir+'/final.pth'.format(idx))
+        '''
+torch.save(single_mt.state_dict(), 'model/'+(sys.argv[1] if len(sys.argv)>1 else "final")+'.pth')
 eval_summary_writer.close()
 train_summary_writer.close()
 

@@ -87,7 +87,7 @@ class Event:
             return {'type': 'time_shift', 'value': valid_value}
         else:
             valid_value -= (RANGE_NOTE_ON + RANGE_NOTE_OFF + RANGE_TIME_SHIFT)
-            return {'type': 'velocity', 'value': valid_value}
+            return {'type': 'velocity', 'value': min(valid_value,RANGE_VEL-1)}
 
 
 def _divide_note(notes):
