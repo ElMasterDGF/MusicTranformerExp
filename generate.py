@@ -21,9 +21,8 @@ if torch.cuda.is_available():
 else:
     config.device = torch.device('cpu')
 
-
-current_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-gen_log_dir = 'logs/mt_decoder/generate_'+current_time+'/generate'
+#current_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+#gen_log_dir = 'logs/mt_decoder/generate_'+current_time+'/generate'
 #gen_summary_writer = SummaryWriter(gen_log_dir)
 
 mt = MusicTransformer(
@@ -44,8 +43,31 @@ else:
 inputs = torch.from_numpy(inputs)
 result = mt(inputs, config.length)
 
-for i in result:
-    print(i)
+l = [[] for i in range(128)]
+cont = 0
+forgoten = 0
+
+f = open("notes.txt",'w')
+
+for i in range(len(result)):
+    if result[i] in range(128):
+        l[result[i]].append(i)
+    if result[i] in range(128,256):
+        try:
+            ini = l[result[i]-128].pop(0)
+            print(str(i-ini))
+            f.write(str(i-ini))
+        except:
+            print("CLOSED BEFORE OPENED ",str(result[i]-128)," ",str(i))
+            cont+=1
+
+for i in range(len(l)):
+    print(str(i),l[i])
+    forgoten+=len(l[i])
+
+print(str(forgoten))
+print(str(cont))
+f.close()
 
 decode_midi(result, file_path=config.save_path)
 

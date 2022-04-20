@@ -124,7 +124,10 @@ for e in range(config.epochs):
             eval_preiction, weights = single_mt.forward(eval_x)
 
             eval_metrics = metric_set(eval_preiction, eval_y)
-            torch.save(single_mt.state_dict(), 'model/train-{}.pth'.format(e))
+
+            if e%250==0 and e!=0:
+                torch.save(single_mt.state_dict(), 'model/train-{}.pth'.format(e))
+
             if b == 0:
                 train_summary_writer.add_histogram("target_analysis", batch_y, global_step=e)
                 train_summary_writer.add_histogram("source_analysis", batch_x, global_step=e)
